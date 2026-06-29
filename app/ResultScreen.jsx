@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { analyzeImage, ANALYSIS_PROMPT } from '../lib/gemini';
+import { analyzeImage, PROMPTS } from '../lib/gemini'; 
 
 export default function ResultScreen() {
-  const { base64Image } = useLocalSearchParams();
+  const { base64Image, promptKey } = useLocalSearchParams(); 
   const [analysis, setAnalysis] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -17,11 +17,12 @@ export default function ResultScreen() {
     setLoading(true);
     setError(null);
     try {
-      const result = await analyzeImage(base64Image, ANALYSIS_PROMPT);
-      console.log('FULL GEMINI RESPONSE:', JSON.stringify(result)); 
+      const prompt = PROMPTS[promptKey] || PROMPTS.academic; 
+      const result = await analyzeImage(base64Image, prompt);
+      console.log('FULL GEMINI RESPONSE:', JSON.stringify(result));
       const textPart = result?.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!textPart) throw new Error('Empty response from Gemini');
-  
+
       const cleaned = textPart.replace(/```json|```/g, '').trim();
       setAnalysis(JSON.parse(cleaned));
     } catch (err) {
@@ -51,6 +52,8 @@ export default function ResultScreen() {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.personaTag}>Persona: {promptKey}</Text>
+
       <Text style={styles.sectionTitle}>Objects</Text>
       {analysis.objects.map((obj, i) => (
         <Text key={i} style={styles.listItem}>• {obj}</Text>
@@ -73,6 +76,7 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 12, color: '#5A6472' },
   errorText: { color: '#B3261E', textAlign: 'center', fontSize: 16 },
+  personaTag: { fontSize: 13, color: '#5B3FA3', fontWeight: 'bold', marginBottom: 8 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', marginTop: 16, color: '#1F2A44' },
   listItem: { fontSize: 15, marginTop: 4 },
   bodyText: { fontSize: 15, marginTop: 4, color: '#2B2F38' },
